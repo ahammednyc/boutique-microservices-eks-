@@ -20,7 +20,7 @@ spec:
                 sleep 2
               done
 
-              echo "Restoring dump..."
+              echo "Restoring dump (creates auth_db, products_db, orders_db, users_db)..."
               psql -h boutique-postgres -U postgres -f /dump/boutique_full.sql
 
               echo "Creating auth_db schema..."
@@ -55,6 +55,106 @@ spec:
                 quantity INTEGER NOT NULL,
                 price DECIMAL(10,2) NOT NULL,
                 created_at TIMESTAMP DEFAULT NOW()
+              );"
+
+              echo "Creating and seeding products_db schema (dump left this empty)..."
+              psql -h boutique-postgres -U postgres -d products_db -v ON_ERROR_STOP=0 -c "
+              CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";
+
+              CREATE TABLE IF NOT EXISTS categories (
+                id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                name VARCHAR(100) NOT NULL,
+                description TEXT,
+                image_url VARCHAR(500),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+              );
+
+              CREATE TABLE IF NOT EXISTS products (
+                id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                name VARCHAR(255) NOT NULL,
+                slug VARCHAR(255),
+                description TEXT,
+                short_description TEXT,
+                sku VARCHAR(100),
+                brand VARCHAR(100),
+                category_id UUID REFERENCES categories(id),
+                price DECIMAL(10,2) NOT NULL,
+                compare_price DECIMAL(10,2),
+                materials TEXT,
+                care_instructions TEXT,
+                inventory_quantity INTEGER DEFAULT 0,
+                is_featured BOOLEAN DEFAULT false,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+              );
+
+              CREATE TABLE IF NOT EXISTS product_images (
+                id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+                image_url VARCHAR(500) NOT NULL,
+                alt_text VARCHAR(255),
+                is_primary BOOLEAN DEFAULT false,
+                sort_order INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+              );
+
+              INSERT INTO categories (id, name, description) VALUES
+              ('10000000-0000-0000-0000-000000000001', 'Dresses', 'Elegant dresses for special occasions'),
+              ('10000000-0000-0000-0000-000000000002', 'Accessories', 'Luxury accessories and fashion items'),
+              ('10000000-0000-0000-0000-000000000003', 'Bags', 'Designer handbags and tote bags'),
+              ('10000000-0000-0000-0000-000000000004', 'Outerwear', 'Coats and jackets'),
+              ('10000000-0000-0000-0000-000000000005', 'Shoes', 'Designer footwear and heels')
+              ON CONFLICT (id) DO NOTHING;
+
+              INSERT INTO products (id, name, slug, description, short_description, sku, brand, category_id, price, compare_price, inventory_quantity, is_featured) VALUES
+              (gen_random_uuid(), 'Silk Evening Gown', 'silk-evening-gown', 'Beautiful floor-length gown crafted from premium silk', 'Luxurious silk evening gown', 'LEG-001', 'LUXE BOUTIQUE', '10000000-0000-0000-0000-000000000001', 1899.00, 2299.00, 15, true),
+              (gen_random_uuid(), 'Cashmere Coat', 'cashmere-coat', 'Elegant wool and cashmere blend coat for winter', 'Warm luxury coat', 'COAT-001', 'LUXE BOUTIQUE', '10000000-0000-0000-0000-000000000004', 899.00, 1200.00, 20, true),
+              (gen_random_uuid(), 'Leather Handbag', 'leather-handbag', 'Premium Italian leather tote bag', 'Luxury leather tote', 'BAG-001', 'LUXE BOUTIQUE', '10000000-0000-0000-0000-000000000003', 599.00, 799.00, 25, true),
+              (gen_random_uuid(), 'Diamond Necklace', 'diamond-necklace', 'Stunning diamond pendant necklace', 'Elegant diamond jewelry', 'JWL-001', 'LUXE BOUTIQUE', '10000000-0000-0000-0000-000000000002', 2999.00, 3999.00, 10, true),
+              (gen_random_uuid(), 'Designer Heels', 'designer-heels', 'Elegant stiletto heels in premium leather', 'Luxury high heels', 'SHOES-001', 'LUXE BOUTIQUE', '10000000-0000-0000-0000-000000000005', 499.00, 699.00, 18, true);
+
+              INSERT INTO product_images (product_id, image_url, alt_text, is_primary, sort_order)
+              SELECT p.id,
+                CASE
+                  WHEN p.name LIKE '%Gown%' THEN 'https://images.unsplash.com/photo-1594633313593-bab3825d0caf?w=800&q=80'
+                  WHEN p.name LIKE '%Coat%' THEN 'https://images.unsplash.com/photo-1544967003-f26d5581c8a2?w=800&q=80'
+                  WHEN p.name LIKE '%Handbag%' THEN 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&q=80'
+                  WHEN p.name LIKE '%Necklace%' THEN 'https://images.unsplash.com/photo-1596944924647-6e6e2b08b550?w=800&q=80'
+                  WHEN p.name LIKE '%Heels%' THEN 'https://images.unsplash.com/photo-1543166928-355bad0c79e4?w=800&q=80'
+                END,
+                p.name || ' - Main image', true, 1
+              FROM products p
+              WHERE p.sku IN ('LEG-001', 'COAT-001', 'BAG-001', 'JWL-001', 'SHOES-001');"
+
+              echo "Creating users_db schema (dump left this empty)..."
+              psql -h boutique-postgres -U postgres -d users_db -c "
+              CREATE TABLE IF NOT EXISTS users (
+                id UUID PRIMARY KEY,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                first_name VARCHAR(100),
+                last_name VARCHAR(100),
+                role VARCHAR(50) DEFAULT 'customer',
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+              );
+              CREATE TABLE IF NOT EXISTS addresses (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID NOT NULL,
+                street VARCHAR(255),
+                city VARCHAR(100),
+                state VARCHAR(100),
+                zip_code VARCHAR(20),
+                country VARCHAR(100),
+                is_default BOOLEAN DEFAULT false,
+                created_at TIMESTAMP DEFAULT NOW()
+              );
+              CREATE TABLE IF NOT EXISTS user_preferences (
+                user_id UUID PRIMARY KEY,
+                currency VARCHAR(10) DEFAULT 'USD',
+                language VARCHAR(10) DEFAULT 'en',
+                newsletter BOOLEAN DEFAULT true,
+                promotions BOOLEAN DEFAULT true
               );"
 
               echo "Restore completed."
