@@ -89,6 +89,15 @@ spec:
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
               );
 
+              DO \$\$
+              BEGIN
+                IF NOT EXISTS (
+                  SELECT 1 FROM pg_constraint WHERE conname = 'products_sku_unique'
+                ) THEN
+                  ALTER TABLE products ADD CONSTRAINT products_sku_unique UNIQUE (sku);
+                END IF;
+              END \$\$;
+
               CREATE TABLE IF NOT EXISTS product_images (
                 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                 product_id UUID REFERENCES products(id) ON DELETE CASCADE,
@@ -112,7 +121,8 @@ spec:
               (gen_random_uuid(), 'Cashmere Coat', 'cashmere-coat', 'Elegant wool and cashmere blend coat for winter', 'Warm luxury coat', 'COAT-001', 'LUXE BOUTIQUE', '10000000-0000-0000-0000-000000000004', 899.00, 1200.00, 20, true),
               (gen_random_uuid(), 'Leather Handbag', 'leather-handbag', 'Premium Italian leather tote bag', 'Luxury leather tote', 'BAG-001', 'LUXE BOUTIQUE', '10000000-0000-0000-0000-000000000003', 599.00, 799.00, 25, true),
               (gen_random_uuid(), 'Diamond Necklace', 'diamond-necklace', 'Stunning diamond pendant necklace', 'Elegant diamond jewelry', 'JWL-001', 'LUXE BOUTIQUE', '10000000-0000-0000-0000-000000000002', 2999.00, 3999.00, 10, true),
-              (gen_random_uuid(), 'Designer Heels', 'designer-heels', 'Elegant stiletto heels in premium leather', 'Luxury high heels', 'SHOES-001', 'LUXE BOUTIQUE', '10000000-0000-0000-0000-000000000005', 499.00, 699.00, 18, true);
+              (gen_random_uuid(), 'Designer Heels', 'designer-heels', 'Elegant stiletto heels in premium leather', 'Luxury high heels', 'SHOES-001', 'LUXE BOUTIQUE', '10000000-0000-0000-0000-000000000005', 499.00, 699.00, 18, true)
+              ON CONFLICT (sku) DO NOTHING;
 
               INSERT INTO product_images (product_id, image_url, alt_text, is_primary, sort_order)
               SELECT p.id,
@@ -125,7 +135,8 @@ spec:
                 END,
                 p.name || ' - Main image', true, 1
               FROM products p
-              WHERE p.sku IN ('LEG-001', 'COAT-001', 'BAG-001', 'JWL-001', 'SHOES-001');"
+              WHERE p.sku IN ('LEG-001', 'COAT-001', 'BAG-001', 'JWL-001', 'SHOES-001')
+              AND NOT EXISTS (SELECT 1 FROM product_images pi WHERE pi.product_id = p.id);"
 
               echo "Creating users_db schema (dump left this empty)..."
               psql -h boutique-postgres -U postgres -d users_db -c "
