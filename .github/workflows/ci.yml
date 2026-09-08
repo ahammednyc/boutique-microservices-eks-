@@ -48,13 +48,13 @@ jobs:
         run: |
           if [ "${{ matrix.service }}" == "frontend" ]; then
             BUILD_PATH="projects/boutique-microservices/frontend"
+            BUILD_ARGS="--build-arg REACT_APP_API_URL=/api"
           else
             BUILD_PATH="projects/boutique-microservices/backend/services/${{ matrix.service }}"
+            BUILD_ARGS=""
           fi
-
           echo "Building from $BUILD_PATH"
-
-          docker build \
+          docker build $BUILD_ARGS \
             -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/${{ matrix.service }}:$IMAGE_TAG \
           $BUILD_PATH
 
