@@ -26,6 +26,9 @@ jobs:
           - product-service
           - user-service
           - frontend
+	  - cart-service
+
+	
 
     steps:
       - name: Checkout Code
@@ -83,7 +86,7 @@ jobs:
           ACCOUNT=${{ secrets.AWS_ACCOUNT_ID }}
           REGION=${{ secrets.AWS_REGION }}
 
-          for SERVICE in auth gateway orders order-service product-service user-service; do
+          for SERVICE in auth gateway orders order-service product-service user-service cart-service; do
             MANIFEST="gitops/k8s/backend/${SERVICE}.yml"
             sed -i "s|${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/${SERVICE}:.*|${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/${SERVICE}:${NEW_TAG}|g" $MANIFEST
           done

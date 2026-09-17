@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import apiClient from '../services/api';
 import { Product } from '../types';
+import { useAuth } from './AuthContext';
 
 interface CartItem extends Product {
   quantity: number;
@@ -11,98 +13,6 @@ interface CartState {
   itemCount: number;
 }
 
-type CartAction =
-  | { type: 'ADD_ITEM'; payload: Product }
-  | { type: 'REMOVE_ITEM'; payload: string }
-  | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } }
-  | { type: 'CLEAR_CART' };
-
-const initialState: CartState = {
-  items: [],
-  total: 0,
-  itemCount: 0,
-};
-
-const cartReducer = (state: CartState, action: CartAction): CartState => {
-  switch (action.type) {
-    case 'ADD_ITEM': {
-      const existingItem = state.items.find(item => item.id === action.payload.id);
-      
-      if (existingItem) {
-        const updatedItems = state.items.map(item =>
-          item.id === action.payload.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-        return {
-          ...state,
-          items: updatedItems,
-          total: calculateTotal(updatedItems),
-          itemCount: calculateItemCount(updatedItems),
-        };
-      }
-      
-      const newItems = [...state.items, { ...action.payload, quantity: 1 }];
-      return {
-        ...state,
-        items: newItems,
-        total: calculateTotal(newItems),
-        itemCount: calculateItemCount(newItems),
-      };
-    }
-    
-    case 'REMOVE_ITEM': {
-      const newItems = state.items.filter(item => item.id !== action.payload);
-      return {
-        ...state,
-        items: newItems,
-        total: calculateTotal(newItems),
-        itemCount: calculateItemCount(newItems),
-      };
-    }
-    
-    case 'UPDATE_QUANTITY': {
-      const { id, quantity } = action.payload;
-      
-      if (quantity === 0) {
-        const newItems = state.items.filter(item => item.id !== id);
-        return {
-          ...state,
-          items: newItems,
-          total: calculateTotal(newItems),
-          itemCount: calculateItemCount(newItems),
-        };
-      }
-      
-      const newItems = state.items.map(item =>
-        item.id === id ? { ...item, quantity } : item
-      );
-      
-      return {
-        ...state,
-        items: newItems,
-        total: calculateTotal(newItems),
-        itemCount: calculateItemCount(newItems),
-      };
-    }
-    
-    case 'CLEAR_CART':
-      return initialState;
-    
-    default:
-      return state;
-  }
-};
-
-const calculateTotal = (items: CartItem[]): number =>
-  items.reduce((total, item) => {
-    const price = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
-    return total + (price * item.quantity);
-  }, 0);
-
-const calculateItemCount = (items: CartItem[]): number =>
-  items.reduce((count, item) => count + item.quantity, 0);
-
 interface CartContextType extends CartState {
   addItem: (product: Product) => void;
   removeItem: (productId: string) => void;
@@ -110,25 +20,105 @@ interface CartContextType extends CartState {
   clearCart: () => void;
 }
 
+const initialState: CartState = {
+  items: [],
+  total: 0,
+  itemCount: 0,
+};
+
+// Maps the cart-service API response (nested `product` object per item)
+// into the flattened CartItem shape every existing page already expects.
+const mapCartResponse = (data: any): CartState => {
+  const items: CartItem[] = (data?.items || [])
+    .filter((item: any) => item.product)
+    .map((item: any) => ({
+      ...item.product,
+      id: item.productId,
+      quantity: item.quantity,
+    }));
+
+  return {
+    items,
+    total: data?.total || 0,
+    itemCount: data?.itemCount || 0,
+  };
+};
+
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [state, dispatch] = useReducer(cartReducer, initialState);
+  const { user, isAuthenticated } = useAuth();
+  const [state, setState] = useState<CartState>(initialState);
 
-  const addItem = (product: Product) => {
-    dispatch({ type: 'ADD_ITEM', payload: product });
+  const userId = user?.id;
+
+  const fetchCart = useCallback(async () => {
+    if (!userId) {
+      setState(initialState);
+      return;
+    }
+    try {
+      const response = await apiClient.get('/cart', { params: { userId } });
+      setState(mapCartResponse(response.data.data));
+    } catch (error) {
+      console.error('Failed to fetch cart:', error);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (isAuthenticated && userId) {
+      fetchCart();
+    } else {
+      setState(initialState);
+    }
+  }, [isAuthenticated, userId, fetchCart]);
+
+  const addItem = async (product: Product) => {
+    if (!userId) return;
+    try {
+      const response = await apiClient.post('/cart/items', {
+        productId: product.id,
+        quantity: 1,
+        userId,
+      });
+      setState(mapCartResponse(response.data.data));
+    } catch (error) {
+      console.error('Failed to add item to cart:', error);
+    }
   };
 
-  const removeItem = (productId: string) => {
-    dispatch({ type: 'REMOVE_ITEM', payload: productId });
+  const removeItem = async (productId: string) => {
+    if (!userId) return;
+    try {
+      const response = await apiClient.delete(`/cart/items/${productId}`, { params: { userId } });
+      setState(mapCartResponse(response.data.data));
+    } catch (error) {
+      console.error('Failed to remove item from cart:', error);
+    }
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
-    dispatch({ type: 'UPDATE_QUANTITY', payload: { id: productId, quantity } });
+  const updateQuantity = async (productId: string, quantity: number) => {
+    if (!userId) return;
+    try {
+      if (quantity === 0) {
+        await removeItem(productId);
+        return;
+      }
+      const response = await apiClient.put(`/cart/items/${productId}`, { quantity, userId });
+      setState(mapCartResponse(response.data.data));
+    } catch (error) {
+      console.error('Failed to update cart item:', error);
+    }
   };
 
-  const clearCart = () => {
-    dispatch({ type: 'CLEAR_CART' });
+  const clearCart = async () => {
+    if (!userId) return;
+    try {
+      await apiClient.delete('/cart', { params: { userId } });
+      setState(initialState);
+    } catch (error) {
+      console.error('Failed to clear cart:', error);
+    }
   };
 
   return (

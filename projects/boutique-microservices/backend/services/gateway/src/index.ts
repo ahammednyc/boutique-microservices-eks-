@@ -22,6 +22,7 @@ const services = {
   products: process.env.PRODUCTS_SERVICE_URL || 'http://localhost:3003',
   orders: process.env.ORDERS_SERVICE_URL || 'http://localhost:3004',
   users: process.env.USERS_SERVICE_URL || 'http://localhost:3005',
+  cart: process.env.CART_SERVICE_URL || 'http://localhost:3007',
 };
 
 app.use('/api/auth', createProxyMiddleware({
@@ -46,6 +47,11 @@ app.use('/api/users', createProxyMiddleware({
   target: services.users,
   changeOrigin: true,
   pathRewrite: { '^/api/users': '' },
+}));
+app.use('/api/cart', createProxyMiddleware({
+  target: services.cart,
+  changeOrigin: true,
+  pathRewrite: { '^/api/cart': '' },
 }));
 
 app.use((req, res) => {
