@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: auth
   namespace: boutique
+  labels:
+    app: auth
 spec:
   replicas: 1
   selector:
@@ -29,18 +31,21 @@ spec:
                   name: boutique-secrets
                   key: AUTH_DB_URL
 
---- 
+---
 
 apiVersion: v1
 kind: Service
 metadata:
   name: auth
   namespace: boutique
+  labels:
+    app: auth
 spec:
   selector:
     app: auth
   ports:
-    - protocol: TCP
+    - name: http
+      protocol: TCP
       port: 3002
       targetPort: 3002
   type: ClusterIP

@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: cart-service
   namespace: boutique
+  labels: 
+    app: cart-service
 spec:
   replicas: 1
   selector:
@@ -38,11 +40,14 @@ kind: Service
 metadata:
   name: cart-service
   namespace: boutique
+  labels:
+    app: cart-service
 spec:
   selector:
     app: cart-service
   ports:
-    - protocol: TCP
+    - name: http
+      protocol: TCP
       port: 3007
       targetPort: 3007
   type: ClusterIP

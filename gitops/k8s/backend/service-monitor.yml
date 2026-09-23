@@ -10,8 +10,10 @@ spec:
     matchNames:
       - boutique
   selector:
-    matchLabels:
-      app: gateway   
+    matchExpressions:
+      - key: app
+        operator: Exists
+     
   endpoints:
     - port: http
       path: /metrics
