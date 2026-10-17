@@ -8,6 +8,7 @@ import Layout from './components/Layout/Layout';
 import Home from './pages/Home/Home';
 import Products from './pages/Products/Products';
 import ProductDetail from './pages/ProductDetail/ProductDetail';
+import Clearance from './pages/Clearance/Clearance';
 import Cart from './pages/Cart/Cart';
 import Login from './pages/Login/Login';
 import Register from './pages/Register/Register';
@@ -271,6 +272,7 @@ function App() {
                 <Route index element={<Home />} />
                 <Route path="products" element={<Products />} />
                 <Route path="products/:id" element={<ProductDetail />} />
+                <Route path="clearance" element={<Clearance />} />
                                 <Route path="cart" element={<Cart />} />
                 <Route
                   path="checkout"

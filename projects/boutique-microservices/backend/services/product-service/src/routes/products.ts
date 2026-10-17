@@ -54,6 +54,7 @@ let whereClause = 'WHERE 1=1';
              p.brand, p.inventory_quantity, p.is_featured, p.created_at, p.updated_at,
              COALESCE(c.name, 'Uncategorized') as category,
              CASE 
+               WHEN c.name = 'Clearance' THEN COALESCE((SELECT pi.image_url FROM product_images pi WHERE pi.product_id = p.id ORDER BY pi.is_primary DESC, pi.sort_order LIMIT 1), '/product-images/placeholder.jpg')
                WHEN p.name ILIKE '%gown%' OR p.name ILIKE '%dress%' THEN '/product-images/silk-evening-gown.jpg'
                WHEN p.name ILIKE '%coat%' OR p.name ILIKE '%cashmere%' THEN '/product-images/cashmere-coat.jpg'
                WHEN p.name ILIKE '%handbag%' OR p.name ILIKE '%bag%' THEN '/product-images/leather-handbag.jpg'
@@ -108,6 +109,7 @@ router.get('/:id', async (req, res) => {
              p.brand, p.inventory_quantity, p.is_featured, p.created_at, p.updated_at,
              COALESCE(c.name, 'Uncategorized') as category,
              CASE 
+               WHEN c.name = 'Clearance' THEN COALESCE((SELECT pi.image_url FROM product_images pi WHERE pi.product_id = p.id ORDER BY pi.is_primary DESC, pi.sort_order LIMIT 1), '/product-images/placeholder.jpg')
                WHEN p.name ILIKE '%gown%' OR p.name ILIKE '%dress%' THEN '/product-images/silk-evening-gown.jpg'
                WHEN p.name ILIKE '%coat%' OR p.name ILIKE '%cashmere%' THEN '/product-images/cashmere-coat.jpg'
                WHEN p.name ILIKE '%handbag%' OR p.name ILIKE '%bag%' THEN '/product-images/leather-handbag.jpg'

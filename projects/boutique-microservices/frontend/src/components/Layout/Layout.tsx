@@ -18,6 +18,7 @@ import {
   AccountCircle,
   Home,
   ShoppingBag,
+  LocalOffer,
   Menu as MenuIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
@@ -55,6 +56,12 @@ const Layout: React.FC = () => {
             <ShoppingBag />
           </ListItemIcon>
           <ListItemText primary="Products" />
+        </ListItem>
+        <ListItem component={RouterLink} to="/clearance">
+          <ListItemIcon>
+            <LocalOffer />
+          </ListItemIcon>
+          <ListItemText primary="Clearance" />
         </ListItem>
         {isAuthenticated && (
           <>
