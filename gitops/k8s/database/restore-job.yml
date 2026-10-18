@@ -138,30 +138,6 @@ spec:
               WHERE p.sku IN ('LEG-001', 'COAT-001', 'BAG-001', 'JWL-001', 'SHOES-001')
               AND NOT EXISTS (SELECT 1 FROM product_images pi WHERE pi.product_id = p.id);"
 
-              psql -h boutique-postgres -U postgres -d products_db -c "
-              INSERT INTO categories (id, name, description) VALUES
-              ('10000000-0000-0000-0000-000000000006', 'Clearance', 'Discounted items while stock lasts')
-              ON CONFLICT (id) DO NOTHING;
-
-              INSERT INTO products (id, name, slug, description, short_description, sku, brand, category_id, price, compare_price, inventory_quantity, is_featured) VALUES
-              (gen_random_uuid(), 'Suede Ankle Boots', 'suede-ankle-boots', 'Soft suede ankle boots with a stacked heel and side zip', 'Suede ankle boots', 'CLR-001', 'LUXE BOUTIQUE', '10000000-0000-0000-0000-000000000006', 79.00, 120.00, 12, false),
-              (gen_random_uuid(), 'Woven Leather Handbag', 'woven-leather-handbag', 'Hand-woven leather handbag with a roomy interior and gold hardware', 'Woven leather handbag', 'CLR-002', 'LUXE BOUTIQUE', '10000000-0000-0000-0000-000000000006', 59.00, 89.00, 15, false),
-              (gen_random_uuid(), 'Silk Blouse', 'silk-blouse', 'Lightweight silk blouse with a relaxed fit and soft drape', 'Silk blouse', 'CLR-003', 'LUXE BOUTIQUE', '10000000-0000-0000-0000-000000000006', 45.00, 70.00, 20, false),
-              (gen_random_uuid(), 'Cashmere Scarf', 'cashmere-scarf', 'Ultra-soft cashmere scarf in a classic oversized wrap', 'Cashmere scarf', 'CLR-004', 'LUXE BOUTIQUE', '10000000-0000-0000-0000-000000000006', 29.00, 48.00, 30, false),
-              (gen_random_uuid(), 'Leather Backpack', 'leather-backpack', 'Full-grain leather backpack with padded straps and a laptop sleeve', 'Leather backpack', 'CLR-005', 'LUXE BOUTIQUE', '10000000-0000-0000-0000-000000000006', 89.00, 135.00, 10, false)
-              ON CONFLICT (sku) DO NOTHING;
-
-              INSERT INTO product_images (product_id, image_url, alt_text, is_primary, sort_order)
-              SELECT p.id, v.url, p.name || ' - Main image', true, 1
-              FROM products p
-              JOIN (VALUES
-                ('CLR-001', 'https://images.unsplash.com/photo-1761052720710-32349209f6b4?w=800&q=80'),
-                ('CLR-002', 'https://images.unsplash.com/photo-1624687943971-e86af76d57de?w=800&q=80'),
-                ('CLR-003', 'https://images.unsplash.com/photo-1761117228880-df2425bd70da?w=800&q=80'),
-                ('CLR-004', 'https://images.unsplash.com/photo-1457545195570-67f207084966?w=800&q=80'),
-                ('CLR-005', 'https://images.unsplash.com/photo-1622560480605-d83c853bc5c3?w=800&q=80')
-              ) AS v(sku, url) ON v.sku = p.sku
-              WHERE NOT EXISTS (SELECT 1 FROM product_images pi WHERE pi.product_id = p.id);"
               echo "Creating users_db schema (dump left this empty)..."
               psql -h boutique-postgres -U postgres -d users_db -c "
               CREATE TABLE IF NOT EXISTS users (
